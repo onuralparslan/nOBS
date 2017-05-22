@@ -1,4 +1,4 @@
-# nOBS v2.0
+# nOBS v2.1
 
 Optical Burst Switching extension for ns-2 simulator. 
 
