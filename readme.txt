@@ -8,7 +8,18 @@ G. Gurel, O. Alparslan and E. Karasan, "nOBS: an ns2 based Simulation Tool for P
 
 
 # RELEASE NOTES
- 
+
+v2.1 (2017-05-22):
+
+-Fixed a bug in reservation delay calculation when JET_TYPE is 1
+
+-Improved the tracers so that the packets dropped in the optical domain are shown in the trace file and nam
+
+-Added the option BURST_SIZE_THRESHOLD. A burst is sent when the total size of packets (in terms of Bytes) inside the burst passes this threshold
+
+-Updated the example script sim20_7bmulti-cont.tcl so that my-duplex-link and my-duplex-link2 functions automatically set LINKSPEED option
+
+
 v2.0 (2016-08-10):
 
 -Updated the code for ns version 2.35
@@ -32,17 +43,17 @@ Installation requires replacing some default ns-2 files and adding some new sour
 
 4) Add the following code to OBJ_CC in Makefile
 
-	optical/op-delay.o \
-	optical/op-queue.o \
-	optical/op-burst_agent.o \
-	optical/op-classifier.o \
-	optical/op-classifier-hash.o \
-	optical/op-classifier-sr.o \
-	optical/op-sragent.o \
-	optical/op-queue2.o \
-	optical/op-schedule.o \
-	optical/op-converterschedule.o\
-	optical/op-fdlschedule.o\
+	optical/op-delay.o \\
+	optical/op-queue.o \\
+	optical/op-burst_agent.o \\
+	optical/op-classifier.o \\
+	optical/op-classifier-hash.o \\
+	optical/op-classifier-sr.o \\
+	optical/op-sragent.o \\
+	optical/op-queue2.o \\
+	optical/op-schedule.o \\
+	optical/op-converterschedule.o \\
+	optical/op-fdlschedule.o \\
 
 5) Recompile ns
 

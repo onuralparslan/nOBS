@@ -86,7 +86,13 @@ OpSRAgent::OpSRAgent():Agent(PT_TCP), slot_(0), nslot_(0), maxslot_(-1)
     bind("ackdontburst", &ackdontburst);
 
 
-
+    logtarget = new Trace*[MAX_DEST];
+    logtargetnam = new Trace*[MAX_DEST];
+    for(int i=0; i<MAX_DEST; i++) {
+            logtarget[i]=NULL;
+            logtargetnam[i]=NULL;
+        }
+    
 
     opticnodes= new bool[MAX_DEST];
 
@@ -105,6 +111,8 @@ OpSRAgent::~OpSRAgent()
     delete [] slot_;
     delete [] opticnodes;
     delete [] LinkReservation_;
+    delete [] logtarget;
+    delete [] logtargetnam;
     delete ConverterReservation_;
 }
 
@@ -130,10 +138,10 @@ OpSRAgent::command(int argc, const char*const* argv)
                 //printf("LinkReservation_[i].slotnumber %d\n",LinkReservation_[i].slotnumber);
             }
             ConverterReservation_ = new OpConverterSchedule(converternumber_);
-            if(DEBUG==1) printf("OpSRAgent converternumber_ %d\n",converternumber_);
+	    if(DEBUG==1) printf("OpSRAgent converternumber_ %d\n",converternumber_);
 
             FDLReservation_ = new OpFDLSchedule(fdlnumber_);
-            if(DEBUG==1) printf("OpSRAgent fdlnumber_ %d\n",fdlnumber_);
+	    if(DEBUG==1) printf("OpSRAgent fdlnumber_ %d\n",fdlnumber_);
 
             return(TCL_OK);
         }
@@ -145,7 +153,7 @@ OpSRAgent::command(int argc, const char*const* argv)
         {
             target_ = (NsObject *) TclObject::lookup(argv[2]);
             if (target_ == 0) {
-                printf("OpSource target_ error\n");
+	      printf("OpSource target_ error\n");
                 tcl.resultf("no such target %s", argv[2]);
                 return(TCL_ERROR);
             }
@@ -153,6 +161,8 @@ OpSRAgent::command(int argc, const char*const* argv)
             tcl.resultf(" The target is successfully set");
             return(TCL_OK);
         }
+        
+        
     }
 
     else if(argc == 4)
@@ -173,7 +183,20 @@ OpSRAgent::command(int argc, const char*const* argv)
                 return TCL_OK;
             }
 
+        } else if(strcmp(argv[1], "add_trace_target") == 0) {
+            logtarget[atoi(argv[3])] = (Trace*) TclObject::lookup(argv[2]);
+//             tracedest=atoi(argv[3]);
+            if(logtarget == 0)
+                return TCL_ERROR;
+            return TCL_OK;
+        } else if(strcmp(argv[1], "add_trace_target_nam") == 0) {
+            logtargetnam[atoi(argv[3])] = (Trace*) TclObject::lookup(argv[2]);
+//             tracedest=atoi(argv[3]);
+            if(logtargetnam == 0)
+                return TCL_ERROR;
+            return TCL_OK;
         }
+        
     }
     else
     {
@@ -429,7 +452,7 @@ OpSRAgent::recv(Packet* packet, Handler*)
 
     if (srh->cur_addr_ == srh->num_addrs_)
     {
-        //printf("OPSRAgent::recv REACHED srh->cur_addr_ == srh->num_addrs_ at %f\n\n",Scheduler::instance().clock());
+        if(DEBUG==1) printf("OPSRAgent::recv REACHED srh->cur_addr_ == srh->num_addrs_ at %f\n\n",Scheduler::instance().clock());
         // supposedly dest reached
         // I can change the packet type and send it to the entry point once again..... this would set things right. This part of the code is managing things at the receiver also..... finally the packet goes to the right agent and not our src rt agent.
         //cout << " setting the packet tye as tcp" << endl;
@@ -480,13 +503,15 @@ OpSRAgent::recv(Packet* packet, Handler*)
 
             if(DEBUG==1) printf("OPSRAgent::recv route_length %d type %d slot_no %d srh->cur_addr_++ %d   at %.25f\n\n",hdr_burst::access(packet)->route_length, burst->burst_type, slot_no, srh->cur_addr_,  Scheduler::instance().clock());
 
-
+            
             if(ackdontburst==1) {
 // 	        //dirty solution.  Acks are not burstified
                 if(burst->ack==1) {
                     if(burst->burst_type==0) {
                         node->recv(burst->burst, (Handler *)0);
-                        drop(packet);
+                        if(logtarget[slot_no]!=NULL){
+                            logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                        }
                     }
                     if(burst->burst_type==1) {
 
@@ -515,7 +540,7 @@ OpSRAgent::recv(Packet* packet, Handler*)
 
 
             burst->delayedresv=0;	//clear delay information
-
+            
             result=LinkReservation_[slot_no].recv(packet,conversiontype_,0);
             if(DEBUG==1) printf("LinkReservation_ result %d at %.15f\n",result,NOW);
 
@@ -523,7 +548,7 @@ OpSRAgent::recv(Packet* packet, Handler*)
                 //Did reservation for control packet
 
                 if(headeraddedfirsttime==1) {
-                    //this is the first link of the optical path
+		    //this is the first link of the optical path
                     //data packet is also in the control packet header. Convert them to optical domain and send to the network separately
                     //printf("%f\theaderaddedfirsttime%d\n",NOW,slot_no);
                     hdr_burst* burstdh = hdr_burst::access(burst->burst);
@@ -532,23 +557,31 @@ OpSRAgent::recv(Packet* packet, Handler*)
                     //printf("%f\theaderaddedfirsttime burst->first_link %d burstdh->first_link %d\n",NOW,burst->first_link, burstdh->first_link);
 
                     Scheduler& s = Scheduler::instance();
-                    if(DEBUG==1) printf("SRAgent control unique id %d burst unique id %d delay total %.15f reserv %.15f control arrive %.15f burst arrive %.15f in sragent\n",cmh->uid_, hdr_cmn::access(burst->burst)->uid_, HOP_DELAY*burstdh->route_length+burstdh->delayedresv,burst->delayedresv,burst->delayedresv+NOW, HOP_DELAY*burstdh->route_length+burstdh->delayedresv+NOW);
+                    
+                    double extraswitchtime=0.0;
+                    if(JET_TYPE==1){
+                        //add switch time in case JET is 1
+                        extraswitchtime=SWITCHTIME;
+                    }
+                    
+                    
+                    if(DEBUG==1) printf("SRAgent control unique id %d burst unique id %d delay total %.15f reserv %.15f control arrive %.15f burst arrive %.15f in sragent\n",cmh->uid_, hdr_cmn::access(burst->burst)->uid_, HOP_DELAY*burstdh->route_length+burstdh->delayedresv+extraswitchtime, burst->delayedresv, burst->delayedresv+NOW, HOP_DELAY*burstdh->route_length+burstdh->delayedresv+extraswitchtime+NOW);
 
                     //delay and send control
                     s.schedule(node, packet, burst->delayedresv);
 
                     //delay and send burst
-                    s.schedule(node, burst->burst, HOP_DELAY*burstdh->route_length+burstdh->delayedresv);
+                    s.schedule(node, burst->burst, HOP_DELAY*burstdh->route_length+burstdh->delayedresv+extraswitchtime);
                     if(DEBUG==1) printf("SRAgent burstdh->route_length  %d \n",burstdh->route_length);
                 } else {
-                    //this is not the first link
+		    //this is not the first link
                     //we do not delay the control packets here. They are delayed at the delay agent.
-                    //Pass to next node
+		    //Pass to next node
                     node->recv(packet, (Handler *)0);
                 }
             } else if(result==2) {
                 //Did reservation for data packet
-                //the amount of FDL delay was written by the scheduler to burst->delayedresv. Delay the data packet by this amount of time
+	        //the amount of FDL delay was written by the scheduler to burst->delayedresv. Delay the data packet by this amount of time
                 if((nodetype_!=2)&&(nodetype_!=3)&&(burst->delayedresv>0.00000000000001)) {
                     //we can't say burst->delayedresv==0 because of the problems of double type arithmetic
                     printf("BIG PROBLEM: wrong delay %.25f error in sragent\n",burst->delayedresv);
@@ -561,7 +594,7 @@ OpSRAgent::recv(Packet* packet, Handler*)
                 if(burst->delayedresv<0.00000000000001) {
                     //we can't say burst->delayedresv==0 because of the problems of double type arithmetic
                     //There is no FDL delay. Pass the burst to next node
-                    //we do not delay the control packets here. They are delayed at the delay agent.
+		    //we do not delay the control packets here. They are delayed at the delay agent.
                     node->recv(packet, (Handler *)0);
                 } else {
                     //There is FDL delay for burst
@@ -569,18 +602,22 @@ OpSRAgent::recv(Packet* packet, Handler*)
 
                     //delay in FDL and send the burst
                     s.schedule(node, packet, burst->delayedresv);
-                    if(DEBUG==1) printf("LinkReservation_ Did reservation for data packet burst->delayedresv %.15f at %.15f\n",burst->delayedresv,NOW);
+		    if(DEBUG==1) printf("LinkReservation_ Did reservation for data packet burst->delayedresv %.15f at %.15f\n",burst->delayedresv,NOW);
                 }
             } else if(result==-2) {
-                if(DEBUG==1) printf("DROP result==-2 at %f\n",NOW);
+                if(DEBUG==1) printf("DROP result==-2 slot_no %d at %f \n",slot_no,NOW);
+                
                 //No reservation for data burst. Drop it.
                 Packet **p = (Packet**) packet->accessdata();
                 for(unsigned int i=0; i<burst->packet_num; i++) {
-                    drop(*p);
+                    if(logtarget[slot_no]!=NULL){
+                        logtarget[slot_no]->recv(*p,logtargetnam[slot_no]);
+                    }
                     p++;
                 }
-
-                drop(packet);
+                if(logtarget[slot_no]!=NULL){
+                    logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                }
             } else if(result==-1) {
                 //Could not do reservation for control packet. Try FDL or converter if they are available
                 if(DEBUG==1) printf("headeraddedfirsttime %d nodetype_ %d at %f\n",headeraddedfirsttime,nodetype_,NOW);
@@ -589,18 +626,23 @@ OpSRAgent::recv(Packet* packet, Handler*)
                     //because the packet is still in electronic domain. We tried electronic buffering but failed, so drop the control and burst packets
                     hdr_burst* burstdh = hdr_burst::access(burst->burst);
                     if(DEBUG==1) printf("SRAgent headeraddedfirsttime 1 burstdh->packet_num  %d \n",burstdh->packet_num);
-                    Packet **p = (Packet**) burst->burst->accessdata();
-                    for(unsigned int i=0; i<burstdh->packet_num; i++) {
-                        drop(*p);
+                    Packet **p = (Packet**) packet->accessdata();
+                    for(unsigned int i=0; i<burst->packet_num; i++) {
+                        if(logtarget[slot_no]!=NULL){
+                            logtarget[slot_no]->recv(*p,logtargetnam[slot_no]);
+                        }
                         p++;
                     }
-                    drop(packet);
+                    if(logtarget[slot_no]!=NULL){
+                        logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                    }
+                    
                     if(DEBUG==1) printf("DROP result==-1 at %f\n",NOW);
                 } else if(nodetype_==0) {
                     //there is no converter nor FDL in this node. Just drop the control packet
-                    drop(packet);
-                    if(DEBUG==1) printf("DROP nodetype_==0 at %f\n",NOW);
-
+                    if(logtarget[slot_no]!=NULL){
+                        logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                    }
                 } else if(nodetype_==1) {
                     //There are limited number of converters in the node. Check them
                     int k=0;
@@ -612,7 +654,9 @@ OpSRAgent::recv(Packet* packet, Handler*)
                             result=LinkReservation_[slot_no].recv(packet,1,0);
                             if(result==-1) {
                                 //No wavelength available. Drop the control packet
-                                drop(packet);
+                                if(logtarget[slot_no]!=NULL){
+                                    logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                                }
                                 if(DEBUG==1) printf("wavelength conversion could not rescue the packet %.15f\n",NOW);
                             } else if(result==1) {
                                 //reservation is possible with wavelength conversion
@@ -634,7 +678,10 @@ OpSRAgent::recv(Packet* packet, Handler*)
                     }
                     if(k==converternumber_) {
                         //No suitable converter available. Drop the control packet
-                        drop(packet);
+                        if(logtarget[slot_no]!=NULL){
+                            logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                        }
+
                         if(DEBUG==1) printf("Converter tot %d could not rescue the packet %.15f\n",converternumber_,NOW);
                     }
 
@@ -671,7 +718,9 @@ OpSRAgent::recv(Packet* packet, Handler*)
 
                     if(k==fdlnumber_) {
                         //No suitable FDL available. Drop the control packet
-                        drop(packet);
+                        if(logtarget[slot_no]!=NULL){
+                            logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                        }
                         if(DEBUG==1) printf("FDL tot %d could not rescue the packet %.15f\n",fdlnumber_,NOW);
                     }
                 } else if(nodetype_==3) {
@@ -738,7 +787,7 @@ OpSRAgent::recv(Packet* packet, Handler*)
                                     k=k+1;
                                 }
                             } else {
-                                if(DEBUG==1) printf("FDL NOT available delaytime %.15e at %.15f\n",delaytime, NOW);
+			        if(DEBUG==1) printf("FDL NOT available delaytime %.15e at %.15f\n",delaytime, NOW);
                                 k=k+1;
                             }
                         }
@@ -781,25 +830,21 @@ OpSRAgent::recv(Packet* packet, Handler*)
 
                             if(k==fdlnumber_) {
                                 //No suitable converter+FDL available. Drop the control packet
-                                drop(packet);
+                                if(logtarget[slot_no]!=NULL){
+                                    logtarget[slot_no]->recv(packet,logtargetnam[slot_no]);
+                                }
                                 if(DEBUG==1) printf("Converter+FDL tot %d could not rescue the packet %.15f\n",fdlnumber_,NOW);
                             }
 
-
                         }
-
-
 
                     }
 
-
                 }
-
 
             }
 
         }
-
 
     }
     //printf("did sragent\n");

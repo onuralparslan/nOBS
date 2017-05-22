@@ -41,8 +41,11 @@
 
 #include "opticaldefaults.h"
 
-//Max number of packets in the burst.
+//Burst is sent when the total number of packets inside the burst reaches this threshold.
 #define MAX_PACKET_NUM OpticalDefaults::instance()->MAX_PACKET_NUM
+
+//Burst is sent when the total size of packets (in terms of Bytes) inside the burst passes this threshold.
+#define BURST_SIZE_THRESHOLD OpticalDefaults::instance()->BURST_SIZE_THRESHOLD
 
 //node processing time
 #define HOP_DELAY OpticalDefaults::instance()->HOP_DELAY
@@ -83,7 +86,7 @@
 //Maximum MTU size
 #define MAX_MTU OpticalDefaults::instance()->MAX_MTU
 
-//type of JET reservation. Set to 0 for JET reservation scheme shown in Fig. 1.a, where HOP_DELAY includes SWITCHTIME,
+//type of JET reservation. Set to 0 for JET reservation scheme shown in Fig. 1.a, where HOP_DELAY includes SWITCHTIME, 
 //and 1 for JET reservation scheme shown in Fig. 1.b, where HOP_DELAY does not include SWITCHTIME so lower HOP_DELAY can be selected, as in the paper
 //C. Qiao and M. Yoo, “Optical Burst Switching (OBS) - A New Paradigm for an Optical Internet”, J. High. Speed Networks, Vol. 8, No. 1, pp. 69-84, Jan. 1999
 #define JET_TYPE OpticalDefaults::instance()->JET_TYPE
@@ -206,7 +209,7 @@ private:
     FILE* stat;
     unsigned int record;
     int ackdontburst;
-
+    
     u_long id;
 
 

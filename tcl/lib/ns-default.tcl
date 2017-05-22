@@ -1633,6 +1633,7 @@ Agent/OpSRAgent set ackdontburst 0
 
 
 OpticalDefaults set MAX_PACKET_NUM 500;
+OpticalDefaults set BURST_SIZE_THRESHOLD 100000;
 OpticalDefaults set HOP_DELAY 0.00001;
 OpticalDefaults set TIMEOUT 0.005;
 OpticalDefaults set MAX_LAMBDA 1;

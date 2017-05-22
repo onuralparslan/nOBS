@@ -634,6 +634,19 @@ OpSimpleLink instproc init { src dst bw delay q {lltype "OpDelayLink"} } {
             	$self enable-src-rt $src $dst $head_
         	}
 	}
+	
+	set ns_ [Simulator instance]
+	
+	set tr [$ns_ get-ns-traceall]
+	set nam [$ns_ get-nam-traceall]
+	set Trace_ [$ns_ create-trace Drop $tr $src $dst]
+    set Tracenam_ [$ns_ create-trace Drop $nam $src $dst nam]
+    
+    $Trace_ target $Tracenam_
+    
+    [$src get-module "OpSource"] add_trace_target_ $Trace_ [$dst id]
+    [$src get-module "OpSource"] add_trace_target_nam $Tracenam_ [$dst id]
+	
 
 }
 

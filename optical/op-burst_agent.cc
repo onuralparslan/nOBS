@@ -168,8 +168,8 @@ int BurstAgent::command(int argc, const char*const* argv)
 
                 burstdh->burst_id=id;
                 burstch->burst_id=id;
-
-                id++;
+		
+		id++;
 
                 burstdh->burst_type=1;
                 burstch->burst_type=0;
@@ -283,7 +283,7 @@ void BurstAgent::recv(Packet* pkt, Handler*)
 // 		opticnodes[srh->addrs[srh->cur_addr_-1]]==1
 
 // 	printf("recvdest %d\n",recv_destination);
-        if(DEBUG==1) printf("BurstAgent j %d and srh->addrs[srh->cur_addr_] %d at %.15f\n",j,srh->addrs[srh->cur_addr_], NOW);
+        
         recv_source=srh->addrs[srh->cur_addr_-1];
         recv_size=comh->size();
 //printf("BurstAgent1 j %d and recv_destination %d srh->addrs[srh->cur_addr_] %d at %.15f\n",j,recv_destination,srh->addrs[srh->cur_addr_], NOW);
@@ -298,6 +298,8 @@ void BurstAgent::recv(Packet* pkt, Handler*)
 
         hdr_ip* iph_cont = hdr_ip::access(burst_cont[recv_destination][j]);
         hdr_cmn* cmn_cont = hdr_cmn::access(burst_cont[recv_destination][j]);
+        
+        if(DEBUG==1) printf("BurstAgent j %d and srh->addrs[srh->cur_addr_] %d recv_source %d recv_destination %d burstdh->packet_num %d at %.15f\n",j, srh->addrs[srh->cur_addr_], recv_source, recv_destination, burstdh->packet_num, NOW);
 
 
         /*
@@ -398,8 +400,14 @@ void BurstAgent::recv(Packet* pkt, Handler*)
 
 
 
-        if(cmn_data->size()>=((MAX_PACKET_NUM*MAX_MTU)+BURST_HEADER)) {
-            if(DEBUG==1) printf("BurstAgent size %d ttl %d will be sent\n",cmn_data->size(),iph_data->ttl());
+        if(cmn_data->size()>=(BURST_SIZE_THRESHOLD+BURST_HEADER)) {
+            if(DEBUG==1) printf("BurstAgent FULL size %d ttl %d will be sent\n",cmn_data->size(),iph_data->ttl());
+            //printf("BurstAgent size %d ttl %d will be sent\n",cmn_data->size(),iph_data->ttl());
+            burstsend(recv_destination,j);
+        }
+        
+        if(burstdh->packet_num==MAX_PACKET_NUM) {
+            if(DEBUG==1) printf("BurstAgent FULL number %d ttl %d will be sent\n",burstdh->packet_num,iph_data->ttl());
             //printf("BurstAgent size %d ttl %d will be sent\n",cmn_data->size(),iph_data->ttl());
             burstsend(recv_destination,j);
         }
@@ -582,11 +590,11 @@ void BurstAgent::burstsend(int recv_destination, int queue) {
     burstch->first_link=1;
     burstch->delayedresv=0;
     iph_cont->daddr()=recv_destination;
-
-
+    
+    
 
     if(DEBUG==1) printf("BurstAgent send id %lu size %d ttl %d prepared recv_destination %d queue %d\n",id, cmn_data->size(),iph_data->ttl(),recv_destination, queue);
-
+    
     id++;
 
 

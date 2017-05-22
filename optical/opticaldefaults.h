@@ -9,6 +9,7 @@ class OpticalDefaults;
 class OpticalDefaults : public TclObject {
 public:
     int MAX_PACKET_NUM;
+    int BURST_SIZE_THRESHOLD;
     double HOP_DELAY;
     double TIMEOUT;
     int MAX_LAMBDA;
@@ -27,6 +28,7 @@ public:
 
     OpticalDefaults() {
         bind("MAX_PACKET_NUM",&MAX_PACKET_NUM);
+        bind("BURST_SIZE_THRESHOLD",&BURST_SIZE_THRESHOLD);
         bind_time("HOP_DELAY",&HOP_DELAY);
         bind_time("TIMEOUT",&TIMEOUT);
         bind("MAX_LAMBDA",&MAX_LAMBDA);

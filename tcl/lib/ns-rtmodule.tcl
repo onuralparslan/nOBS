@@ -325,7 +325,7 @@ RtModule/Source instproc register { node } {
 RtModule/OpSource instproc register { node } {
         $self next $node
 
-        $self instvar classifier_
+        $self instvar classifier_ src_agent_
         # Keep old classifier so we can use RtModule::add-route{}.
         $self set classifier_ [$node entry]
 
@@ -334,29 +334,33 @@ RtModule/OpSource instproc register { node } {
         #[$node set switch_] set mask_ [AddrParams McastMask]
         #[$node set switch_] set shift_ [AddrParams McastShift]
 
-	
-
         $node set src_classifier_ [new OpClassifier/OpSR]
         $node set src_agent_ [new Agent/OpSRAgent]
+        set src_agent_ [$node set src_agent_]
         $node set switch_ [$node set src_classifier_]
-	
-
-
-        # $node set multiclassifier_ [new Classifier/Multicast/Replicator]
-        # [$node set multiclassifier_] set node_ $node
-
-
-
-#       $node set mrtObject_ [new mrtObject $node]
+        
+        
+        set ns_ [Simulator instance]
 
         # Install existing classifier at slot 0, new classifier at slot 1
         $node insert-entry $self [$node set switch_] 1
 
         [$node set switch_]  install 0 [$node set src_agent_]
         $node attach [$node set src_agent_]
+}
 
-#       $self set src_rt 1
+RtModule/OpSource instproc add_trace_target_ { Tracenam_ id  } {
 
+$self instvar src_agent_
+    $src_agent_ add_trace_target $Tracenam_ $id
+#     $src_agent_ rrr
+}
+
+RtModule/OpSource instproc add_trace_target_nam { Tracenam_ id  } {
+
+$self instvar src_agent_
+    $src_agent_ add_trace_target_nam $Tracenam_ $id
+#     $src_agent_ rrr
 }
 
 	#OPTICAL EXT ENDED

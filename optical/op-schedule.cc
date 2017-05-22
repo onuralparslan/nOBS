@@ -39,37 +39,37 @@
 
 
 //comparison for floating point arithmetic. Returns 0 if two numbers are very close, 1 if a is bigger, 2 if b is bigger
-int OpSchedule::compare(double a, double b) {
+int OpSchedule::compare(double a, double b){
     int c=0;
-    if(max(fabs(a),fabs(b))!=0) {
-        double r=fabs((a-b)/max(fabs(a),fabs(b)));
-        if(r<1.0e-15) {
-            c=0;
-        } else if(a>b) {
-            c=1;
-        } else {
-            c=2;
-        }
-    } else {
-        if(a==b) {
-            c=0;
-        } else if(a>b) {
-            c=1;
-        } else {
-            c=2;
-        }
+    if(max(fabs(a),fabs(b))!=0){
+      double r=fabs((a-b)/max(fabs(a),fabs(b)));
+      if(r<1.0e-15){
+	c=0;
+      }else if(a>b){
+	c=1;
+      }else{
+	c=2;
+      }
+    }else{
+      if(a==b){
+	c=0;
+      }else if(a>b){
+	c=1;
+      }else{
+	c=2;
+      }
     }
     return c;
 }
 
-int OpSchedule::compare2(double a, double b) {
+int OpSchedule::compare2(double a, double b){
     int c=0;
-    if(a==b) {
-        c=0;
-    } else if(a>b) {
-        c=1;
-    } else {
-        c=2;
+    if(a==b){
+      c=0;
+    }else if(a>b){
+      c=1;
+    }else{
+      c=2;
     }
     return c;
 }
@@ -100,7 +100,7 @@ int OpSchedule::recv(Packet* p, int conversion, double fdldelay)
         burstdh->seg_type=0;
         if(burstdh->burst_type==0) {
             //control packet
-            //head of the control packet arrived to the node
+	    //head of the control packet arrived to the node
 
             if(DEBUG==1) printf("OpSchedule::recv CONTROL PACKET %.15f\n\n\n", Scheduler::instance().clock());
 
@@ -120,7 +120,7 @@ int OpSchedule::recv(Packet* p, int conversion, double fdldelay)
 
         } else {
             //data burst
-            //tail of the burst arrived to the node
+	    //tail of the burst arrived to the node
 
             p_=EnterBurst(p);
 
@@ -190,77 +190,79 @@ Packet* OpSchedule::ScheduleBurst(Packet* p_, int conversion, double fdldelay) {
 
 
 
+    
+
+    
+    
+    
+    if(JET_TYPE==0){
+	if(burstch->first_link==1) {
+
+	  if(DEBUG==1) printf("JET_TYPE 0 this is the first link burstch->route_length %d NOW  %.15f with slotnumber %d\n",burstch->route_length,NOW,slotnumber);
+	  arrival=NOW + burstch->route_length*HOP_DELAY;
+	  leave  =NOW + burstch->route_length*HOP_DELAY + (double)(((int)burstch->burst_size*8)/(double)linkspeed);
+	  realarrival=arrival;
+	  //calculate maximum allowed delay reservation time.
+
+	  maximum_delay=min( (double)(((int)((MAX_PACKET_NUM*MAX_MTU)+BURST_HEADER)*8*MAX_DELAYED_BURST)/(double)linkspeed) ,
+                         (double)(((int)((BURST_SIZE_THRESHOLD)+BURST_HEADER)*8*MAX_DELAYED_BURST)/(double)linkspeed));
+	  if(DEBUG==1) printf("arrival %.15f leave %.15f maximum_delay %.15f\n",arrival,leave, maximum_delay);
 
 
+      } else {
+	  if(DEBUG==1) printf("JET_TYPE 0 this is NOT the first link burstch->route_length %d burstch->route_length_tot %d NOW  %.15f with slotnumber %d\n",burstch->route_length,burstch->route_length_tot,NOW,slotnumber);
+	  //A strange way of calculation due to precision problems of double type arithmetic
+
+	  double hopdelay=burstch->route_length_tot*HOP_DELAY;
+	  double minushopdelay=0;
+	  for(k=0; k<burstch->route_length_tot-burstch->route_length - 1; k++) {
+	      minushopdelay=minushopdelay+HOP_DELAY;
+	  }
 
 
+	  double transfer=burstch->burst_size*8/linkspeed;
+	  arrival=NOW + hopdelay -minushopdelay +fdldelay;
+	  leave  =NOW + hopdelay -minushopdelay + transfer +fdldelay;
+	  if(DEBUG==1) printf("arrival %.15f leave %.15f hopdelay %.15f minushopdelay %.15f hopdelay -minushopdelay %.15f transfer %.15f fdldelay %.15f\n",arrival,leave, hopdelay , minushopdelay , hopdelay -minushopdelay, transfer, fdldelay);
+      }
+    }else if(JET_TYPE==1){
+      if(burstch->first_link==1) {
 
-    if(JET_TYPE==0) {
-        if(burstch->first_link==1) {
+	  if(DEBUG==1) printf("JET_TYPE 1 this is the first link burstch->route_length %d NOW  %.15f with slotnumber %d\n",burstch->route_length,NOW,slotnumber);
+	  arrival=NOW + burstch->route_length*HOP_DELAY + SWITCHTIME;
+	  leave  =NOW + burstch->route_length*HOP_DELAY + (double)(((int)burstch->burst_size*8)/(double)linkspeed) + SWITCHTIME;
+	  realarrival=arrival;
+	  //calculate maximum allowed delay reservation time.
 
-            if(DEBUG==1) printf("JET_TYPE 0 this is the first link burstch->route_length %d NOW  %.15f with slotnumber %d\n",burstch->route_length,NOW,slotnumber);
-            arrival=NOW + burstch->route_length*HOP_DELAY;
-            leave  =NOW + burstch->route_length*HOP_DELAY + (double)(((int)burstch->burst_size*8)/(double)linkspeed);
-            realarrival=arrival;
-            //calculate maximum allowed delay reservation time.
-
-            maximum_delay=(double)(((int)((MAX_PACKET_NUM*MAX_MTU)+BURST_HEADER)*8*MAX_DELAYED_BURST)/(double)linkspeed);
-            if(DEBUG==1) printf("arrival %.15f leave %.15f maximum_delay %.15f\n",arrival,leave, maximum_delay);
-
-
-        } else {
-            if(DEBUG==1) printf("JET_TYPE 0 this is NOT the first link burstch->route_length %d burstch->route_length_tot %d NOW  %.15f with slotnumber %d\n",burstch->route_length,burstch->route_length_tot,NOW,slotnumber);
-            //A strange way of calculation due to precision problems of double type arithmetic
-
-            double hopdelay=burstch->route_length_tot*HOP_DELAY;
-            double minushopdelay=0;
-            for(k=0; k<burstch->route_length_tot-burstch->route_length - 1; k++) {
-                minushopdelay=minushopdelay+HOP_DELAY;
-            }
+	  maximum_delay=min( (double)(((int)((MAX_PACKET_NUM*MAX_MTU)+BURST_HEADER)*8*MAX_DELAYED_BURST)/(double)linkspeed) ,
+                         (double)(((int)((BURST_SIZE_THRESHOLD)+BURST_HEADER)*8*MAX_DELAYED_BURST)/(double)linkspeed));
+	  if(DEBUG==1) printf("arrival %.15f leave %.15f maximum_delay %.15f\n",arrival,leave, maximum_delay);
 
 
-            double transfer=burstch->burst_size*8/linkspeed;
-            arrival=NOW + hopdelay -minushopdelay +fdldelay;
-            leave  =NOW + hopdelay -minushopdelay + transfer +fdldelay;
-            if(DEBUG==1) printf("arrival %.15f leave %.15f hopdelay %.15f minushopdelay %.15f hopdelay -minushopdelay %.15f transfer %.15f fdldelay %.15f\n",arrival,leave, hopdelay , minushopdelay , hopdelay -minushopdelay, transfer, fdldelay);
-        }
-    } else if(JET_TYPE==1) {
-        if(burstch->first_link==1) {
+      } else {
+	  if(DEBUG==1) printf("JET_TYPE 1 this is NOT the first link burstch->route_length %d burstch->route_length_tot %d NOW  %.15f with slotnumber %d\n",burstch->route_length,burstch->route_length_tot,NOW,slotnumber);
+	  //A strange way of calculation due to precision problems of double type arithmetic
 
-            if(DEBUG==1) printf("JET_TYPE 1 this is the first link burstch->route_length %d NOW  %.15f with slotnumber %d\n",burstch->route_length,NOW,slotnumber);
-            arrival=NOW + burstch->route_length*HOP_DELAY + SWITCHTIME;
-            leave  =NOW + burstch->route_length*HOP_DELAY + (double)(((int)burstch->burst_size*8)/(double)linkspeed) + SWITCHTIME;
-            realarrival=arrival;
-            //calculate maximum allowed delay reservation time.
-
-            maximum_delay=(double)(((int)((MAX_PACKET_NUM*MAX_MTU)+BURST_HEADER)*8*MAX_DELAYED_BURST)/(double)linkspeed);
-            if(DEBUG==1) printf("arrival %.15f leave %.15f maximum_delay %.15f\n",arrival,leave, maximum_delay);
+	  double hopdelay=burstch->route_length_tot*HOP_DELAY;
+	  double minushopdelay=0;
+	  for(k=0; k<burstch->route_length_tot-burstch->route_length - 1; k++) {
+	      minushopdelay=minushopdelay+HOP_DELAY;
+	  }
 
 
-        } else {
-            if(DEBUG==1) printf("JET_TYPE 1 this is NOT the first link burstch->route_length %d burstch->route_length_tot %d NOW  %.15f with slotnumber %d\n",burstch->route_length,burstch->route_length_tot,NOW,slotnumber);
-            //A strange way of calculation due to precision problems of double type arithmetic
-
-            double hopdelay=burstch->route_length_tot*HOP_DELAY;
-            double minushopdelay=0;
-            for(k=0; k<burstch->route_length_tot-burstch->route_length - 1; k++) {
-                minushopdelay=minushopdelay+HOP_DELAY;
-            }
-
-
-            double transfer=burstch->burst_size*8/linkspeed;
-            arrival=NOW + hopdelay -minushopdelay +fdldelay + SWITCHTIME;
-            leave  =NOW + hopdelay -minushopdelay + transfer +fdldelay + SWITCHTIME;
-            if(DEBUG==1) printf("arrival %.15f leave %.15f hopdelay %.15f minushopdelay %.15f hopdelay -minushopdelay %.15f transfer %.15f fdldelay %.15f\n",arrival,leave, hopdelay , minushopdelay , hopdelay -minushopdelay, transfer, fdldelay);
-        }
-    } else {
-        printf("OpFDLSchedule Wrong JET_TYPE\n");
-        exit(0);
+	  double transfer=burstch->burst_size*8/linkspeed;
+	  arrival=NOW + hopdelay -minushopdelay +fdldelay + SWITCHTIME;
+	  leave  =NOW + hopdelay -minushopdelay + transfer +fdldelay + SWITCHTIME;
+	  if(DEBUG==1) printf("arrival %.15f leave %.15f hopdelay %.15f minushopdelay %.15f hopdelay -minushopdelay %.15f transfer %.15f fdldelay %.15f\n",arrival,leave, hopdelay , minushopdelay , hopdelay -minushopdelay, transfer, fdldelay);
+      }
+    }else{
+      printf("OpFDLSchedule Wrong JET_TYPE\n");
+      exit(0);
     }
-
-
-
-
+    
+    
+    
+    
 
 
     burst_duration=leave-arrival;
@@ -274,14 +276,14 @@ Packet* OpSchedule::ScheduleBurst(Packet* p_, int conversion, double fdldelay) {
 
 
 
-
-    for(k=0; k<MAX_LAMBDA; k++) {
+    
+    for(k=0; k<MAX_LAMBDA; k++) { 
         while((Head[k]->Next!=NULL)&&(stop==0)) {
 //		printf("probably will Delete reservation of k %d from %f\n",k,temp->updated_end);
 
             if(Head[k]->end+switch_time<NOW) {
 //			printf("Deleted reservation of k %d from %f\n",k,temp->updated_end);
-                temp=Head[k];
+	        temp=Head[k];
                 Head[k]=temp->Next;
                 delete temp;
             } else {
@@ -365,9 +367,9 @@ Packet* OpSchedule::ScheduleBurst(Packet* p_, int conversion, double fdldelay) {
 
 
                 }
-
-
-
+                
+                
+                
                 if(DEBUG==1) printf("temp->end %.15f temp->end+switch_time %.15f arrival %.15f (temp->end+switch_time) - arrival %.15e temp->end+switch_time %.15f min_gap %.15f NOW %.15f\n",temp->end,temp->end+switch_time,arrival,(temp->end+switch_time) - arrival, temp->end+switch_time,min_gap,NOW);
                 if(compare((temp->end+switch_time),arrival)!=2) {
                     finishit=1;
@@ -568,7 +570,7 @@ Packet* OpSchedule::ScheduleBurst2(Packet* p_, double min_gap, int bestlambda, i
         return 0;
 
     }
-
+    
 
 
 }
@@ -602,7 +604,7 @@ Packet* OpSchedule::EnterBurst(Packet* p_) {
         while((temp!=NULL)&&(found==0)) {
 //		printf("OpSchedule::EnterBurst searching not null, temp->destination %d, dest %d, temp->source %d, sour %d, temp->burst_id %d, id %d\n",temp->destination, dest, temp->source, sour, temp->burst_id, id);
             if((temp->destination==dest)&&(temp->source==sour)&&(temp->burst_id==id)) {
-                //found the reservation. However, burst start and leave times in the reservation may be a bit different from the real burst start and leave times due to precision problems of double arithmetic
+	      //found the reservation. However, burst start and leave times in the reservation may be a bit different from the real burst start and leave times due to precision problems of double arithmetic
 
                 burstdh->lambda=k;
                 burstdh->linkspeed=LINKSPEED;
@@ -615,21 +617,21 @@ Packet* OpSchedule::EnterBurst(Packet* p_) {
                 //exit "for loop"
                 k=MAX_LAMBDA;
                 found=1;
-            } else {
-                temp=temp->Next;
-            }
+            }else{
+		temp=temp->Next;
+	    }
         }
     }
 
 
 //Delete the reservations for packets which left the node
-    for(k=0; k<MAX_LAMBDA; k++) {
+    for(k=0; k<MAX_LAMBDA; k++) { 
         while((Head[k]->Next!=NULL)&&(stop==0)) {
 //		printf("probably will Delete reservation of k %d from %f\n",k,temp->updated_end);
 
             if(Head[k]->end+SWITCHTIME<NOW) {
 //			printf("Deleted reservation of k %d from %f\n",k,temp->updated_end);
-                temp=Head[k];
+	        temp=Head[k];
                 Head[k]=temp->Next;
                 delete temp;
             } else {

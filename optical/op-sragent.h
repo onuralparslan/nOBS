@@ -61,6 +61,14 @@
 //Maximum number of destinations
 #define MAX_DEST OpticalDefaults::instance()->MAX_DEST
 
+//type of JET reservation. Set to 0 for JET reservation scheme shown in Fig. 1.a, where HOP_DELAY includes SWITCHTIME, 
+//and 1 for JET reservation scheme shown in Fig. 1.b, where HOP_DELAY does not include SWITCHTIME so lower HOP_DELAY can be selected, as in the paper
+//C. Qiao and M. Yoo, “Optical Burst Switching (OBS) - A New Paradigm for an Optical Internet”, J. High. Speed Networks, Vol. 8, No. 1, pp. 69-84, Jan. 1999
+#define JET_TYPE OpticalDefaults::instance()->JET_TYPE
+
+//minumum time difference between two bursts for switching
+#define SWITCHTIME OpticalDefaults::instance()->SWITCHTIME
+
 class Agent;
 
 
@@ -85,6 +93,7 @@ public:
 
     OpSRAgent();
     ~OpSRAgent();
+    
 
 private:
 
@@ -108,6 +117,10 @@ private:
     int fdlnumber_;
     int conversiontype_;
     int ackdontburst;
+    
+    Trace           **logtarget;
+    Trace           **logtargetnam;
+
 
 };
 
