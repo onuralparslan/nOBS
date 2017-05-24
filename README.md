@@ -43,17 +43,17 @@ Installation requires replacing some default ns-2 files and adding some new sour
 
 4) Add the following code to OBJ_CC in Makefile
 
-	optical/op-delay.o\\
-	optical/op-queue.o\\
-	optical/op-burst_agent.o\\
-	optical/op-classifier.o\\
-	optical/op-classifier-hash.o\\
-	optical/op-classifier-sr.o\\
-	optical/op-sragent.o\\
-	optical/op-queue2.o\\
-	optical/op-schedule.o\\
-	optical/op-converterschedule.o\\
-	optical/op-fdlschedule.o\\
+	optical/op-delay.o\\  
+	optical/op-queue.o\\  
+	optical/op-burst_agent.o\\  
+	optical/op-classifier.o\\  
+	optical/op-classifier-hash.o\\  
+	optical/op-classifier-sr.o\\  
+	optical/op-sragent.o\\  
+	optical/op-queue2.o\\  
+	optical/op-schedule.o\\  
+	optical/op-converterschedule.o\\  
+	optical/op-fdlschedule.o\\  
 
 5) Recompile ns
 
